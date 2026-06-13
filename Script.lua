@@ -1,8 +1,9 @@
--- Jim's Universal Hub V4 (Modern Vector Fly & Precise TextBox Controls)
+-- Jim's Universal Hub V7 (Uncapped Controls & Real IY Fly Engine Integration)
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
@@ -39,7 +40,7 @@ local function setHubVisible(visible)
     end
 end
 
--- Main Window
+-- Main Window Configuration
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -185,8 +186,8 @@ local function AddButton(page, text, callback)
     return Button
 end
 
--- NEW REPLACEMENT FOR SLIDERS: Safe Input Numbers Box Component
-local function AddNumberBox(page, text, min, max, default, callback)
+-- NEW UNLIMITED INPUT NUMBER BOX COMPONENT
+local function AddNumberBox(page, text, default, callback)
     local BoxFrame = Instance.new("Frame", page)
     BoxFrame.Size = UDim2.new(1, -10, 0, 40)
     BoxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
@@ -195,7 +196,7 @@ local function AddNumberBox(page, text, min, max, default, callback)
     local Label = Instance.new("TextLabel", BoxFrame)
     Label.Size = UDim2.new(0.6, 0, 1, 0)
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Text = text .. " (" .. min .. "-" .. max .. "):"
+    Label.Text = text .. " (No Limits):"
     Label.TextColor3 = Color3.fromRGB(220, 220, 220)
     Label.TextSize = 14
     Label.Font = Enum.Font.SourceSans
@@ -217,7 +218,7 @@ local function AddNumberBox(page, text, min, max, default, callback)
     local function validateAndSubmit()
         local num = tonumber(InputField.Text)
         if num then
-            num = math.clamp(math.floor(num), min, max)
+            num = math.floor(num) -- Left open without math.clamp constraints
             InputField.Text = tostring(num)
             callback(num)
         else
@@ -228,7 +229,7 @@ local function AddNumberBox(page, text, min, max, default, callback)
     InputField.FocusLost:Connect(validateAndSubmit)
 end
 
--- Anti-AFK Engine Loop
+-- Anti-AFK Setup
 task.spawn(function()
     local virtualUser = game:GetService("VirtualUser")
     LocalPlayer.Idled:Connect(function()
@@ -382,16 +383,18 @@ AddButton(MainTab, "Sell Lemons Automator", function()
 end)
 
 ---------------------------------------------------------
--- TAB 2: LOCALPLAYER TAB (STABLE FRAME-POSITION ENGINES)
+-- TAB 2: LOCALPLAYER TAB (REAL UNALTERED IY FLY MECHANICS)
 ---------------------------------------------------------
 local LocalPlayerTab = CreateTab("LocalPlayer")
 
 local targetWalkSpeed = 16
 local targetJumpPower = 50
-local targetFlySpeed = 50
+local targetFlySpeed = 50 -- Tracks the IY Fly Speed value dynamically
 local flyEnabled = false
+local wallhopEnabled = false
+local camera = workspace.CurrentCamera
 
--- State Engine Synchronization (Humanoid Modifiers)
+-- WalkSpeed/JumpPower Render loops
 RunService.RenderStepped:Connect(function()
     local character = LocalPlayer.Character
     if character then
@@ -407,91 +410,184 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- TextBox Numeric Modifiers instead of sliders
-AddNumberBox(LocalPlayerTab, "WalkSpeed", 1, 1000, 16, function(value)
+-- Uncapped textboxes
+AddNumberBox(LocalPlayerTab, "WalkSpeed", 16, function(value)
     targetWalkSpeed = value
 end)
 
-AddNumberBox(LocalPlayerTab, "JumpPower", 1, 1000, 50, function(value)
+AddNumberBox(LocalPlayerTab, "JumpPower", 50, function(value)
     targetJumpPower = value
 end)
 
--- REWRITTEN FLY ENGINE: Frame-based Vector Positional Updates (No Physics Freezing)
-local flyConnection
+-- DYNAMIC REAL INFINITE YIELD ENGINE INTEGRATION
+local IYFlyBodyVelocity
+local IYFlyBodyGyro
+local IYFlyConnection
+local flyKeyDown, flyKeyUp
+
+local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+local SPEED = 0
+
 local function stopFlying()
-    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    flyEnabled = false
+    if IYFlyConnection then IYFlyConnection:Disconnect() IYFlyConnection = nil end
+    if flyKeyDown then flyKeyDown:Disconnect() flyKeyDown = nil end
+    if flyKeyUp then flyKeyUp:Disconnect() flyKeyUp = nil end
+    if IYFlyBodyVelocity then IYFlyBodyVelocity:Destroy() IYFlyBodyVelocity = nil end
+    if IYFlyBodyGyro then IYFlyBodyGyro:Destroy() IYFlyBodyGyro = nil end
+    
     local character = LocalPlayer.Character
     if character and character:FindFirstChildOfClass("Humanoid") then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        humanoid.PlatformStand = false
-        -- Clear any residual velocity states
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if root then root.AssemblyLinearVelocity = Vector3.new(0,0,0) end
+        character:FindFirstChildOfClass("Humanoid").PlatformStand = false
     end
 end
 
 local function startFlying()
     stopFlying()
+    flyEnabled = true
+    
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     
     if not root or not humanoid then return end
+    humanoid.PlatformStand = true
+
+    CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    SPEED = 0
+
+    IYFlyBodyGyro = Instance.new("BodyGyro", root)
+    IYFlyBodyGyro.P = 9e4
+    IYFlyBodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+    IYFlyBodyGyro.cframe = root.CFrame
+
+    IYFlyBodyVelocity = Instance.new("BodyVelocity", root)
+    IYFlyBodyVelocity.velocity = Vector3.new(0, 0.1, 0)
+    IYFlyBodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+    -- Real IY Input listeners mapped directly via Mouse
+    flyKeyDown = Mouse.KeyDown:Connect(function(KEY)
+        if KEY:lower() == 'w' then CONTROL.F = targetFlySpeed
+        elseif KEY:lower() == 's' then CONTROL.B = -targetFlySpeed
+        elseif KEY:lower() == 'a' then CONTROL.L = -targetFlySpeed
+        elseif KEY:lower() == 'd' then CONTROL.R = targetFlySpeed
+        elseif KEY:lower() == 'e' then CONTROL.Q = targetFlySpeed * 2
+        elseif KEY:lower() == 'q' then CONTROL.E = -targetFlySpeed * 2
+        end
+    end)
     
-    flyConnection = RunService.Heartbeat:Connect(function(deltaTime)
-        if not flyEnabled or not root or not character:IsDescendantOf(workspace) then 
-            stopFlying() 
-            return 
+    flyKeyUp = Mouse.KeyUp:Connect(function(KEY)
+        if KEY:lower() == 'w' then CONTROL.F = 0
+        elseif KEY:lower() == 's' then CONTROL.B = 0
+        elseif KEY:lower() == 'a' then CONTROL.L = 0
+        elseif KEY:lower() == 'd' then CONTROL.R = 0
+        elseif KEY:lower() == 'e' then CONTROL.Q = 0
+        elseif KEY:lower() == 'q' then CONTROL.E = 0
         end
-        
-        humanoid.PlatformStand = true
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Freezes gravity drops safely without freezing motion
+    end)
 
-        local camera = workspace.CurrentCamera
-        local moveDirection = Vector3.new(0, 0, 0)
+    -- Core Vector Loop tracking exact IY algorithms
+    IYFlyConnection = RunService.RenderStepped:Connect(function()
+        if not flyEnabled or not root or not IYFlyBodyVelocity or not IYFlyBodyGyro then
+            stopFlying()
+            return
+        end
         
-        -- Input Evaluation Loops
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
+        if humanoid then humanoid.PlatformStand = true end
         
-        -- Native Mobile Thumbstick & Jump Tracking compatibility
-        if humanoid.MoveDirection.Magnitude > 0 then
-            moveDirection = moveDirection + humanoid.MoveDirection
+        if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+            SPEED = 50
+        elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+            SPEED = 0
         end
-        if UserInputService.JumpAxis and UserInputService.JumpAxis.Y > 0 then
-            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        
+        -- Fallback calculations for combined Mobile direction matrices
+        local mobileMove = humanoid and humanoid.MoveDirection or Vector3.new(0,0,0)
+        
+        if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 or mobileMove.Magnitude > 0 then
+            local workingCamera = workspace.CurrentCamera
+            local baseVector = Vector3.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + (CONTROL.Q + CONTROL.E)) * 0.2, (CONTROL.F + CONTROL.B) * 0.4)
+            
+            if mobileMove.Magnitude > 0 then
+                local verticalDirection = 0
+                if UserInputService.JumpAxis and UserInputService.JumpAxis.Y > 0 then verticalDirection = targetFlySpeed end
+                IYFlyBodyVelocity.velocity = (mobileMove * targetFlySpeed) + Vector3.new(0, verticalDirection, 0)
+            else
+                IYFlyBodyVelocity.velocity = workingCamera.CFrame:VectorToWorldSpace(baseVector)
+            end
+            
+            lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R, Q = CONTROL.Q, E = CONTROL.E}
+        elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+            local workingCamera = workspace.CurrentCamera
+            IYFlyBodyVelocity.velocity = workingCamera.CFrame:VectorToWorldSpace(Vector3.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + (lCONTROL.Q + lCONTROL.E)) * 0.2, (lCONTROL.F + lCONTROL.B) * 0.4))
+        else
+            IYFlyBodyVelocity.velocity = Vector3.new(0, 0, 0)
         end
-
-        if moveDirection.Magnitude > 0 then
-            root.CFrame = root.CFrame + (moveDirection.Unit * targetFlySpeed * deltaTime)
-        end
+        
+        IYFlyBodyGyro.cframe = workspace.CurrentCamera.CFrame
     end)
 end
 
--- Fly Activation Buttons
 local FlyToggleBtn = AddButton(LocalPlayerTab, "Fly: OFF", function() end)
 FlyToggleBtn.MouseButton1Click:Connect(function()
-    flyEnabled = not flyEnabled
-    FlyToggleBtn.Text = flyEnabled and "Fly: ON" or "Fly: OFF"
-    FlyToggleBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(45, 45, 50)
-    if flyEnabled then startFlying() else stopFlying() end
+    if flyEnabled then
+        stopFlying()
+        FlyToggleBtn.Text = "Fly: OFF"
+        FlyToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    else
+        startFlying()
+        FlyToggleBtn.Text = "Fly: ON"
+        FlyToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+    end
 end)
 
-AddNumberBox(LocalPlayerTab, "Fly Speed", 1, 1000, 50, function(value)
+AddNumberBox(LocalPlayerTab, "Fly Speed", 50, function(value)
     targetFlySpeed = value
 end)
 
+-- Integrated Wallhop Controls
+local WhToggleBtn = AddButton(LocalPlayerTab, "Wallhop Engine: OFF", function() end)
+WhToggleBtn.MouseButton1Click:Connect(function()
+    wallhopEnabled = not wallhopEnabled
+    WhToggleBtn.Text = wallhopEnabled and "Wallhop Engine: ON" or "Wallhop Engine: OFF"
+    WhToggleBtn.BackgroundColor3 = wallhopEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(45, 45, 50)
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if not wallhopEnabled or flyEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChildOfClass("Humanoid") then
+        local root = character.HumanoidRootPart
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {character}
+        
+        local direction = root.CFrame.LookVector * 2.5
+        local result = workspace:Raycast(root.Position, direction, raycastParams)
+        
+        if result and result.Instance and result.Instance.CanCollide then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            
+            local currentCFrame = camera.CFrame
+            local x, y, z = currentCFrame:ToEulerAnglesYXZ()
+            camera.CFrame = CFrame.new(currentCFrame.Position) * CFrame.Angles(0, y + 0.785, 0) * CFrame.Angles(x, 0, z)
+        end
+    end
+end)
+
 LocalPlayer.CharacterAdded:Connect(function()
+    camera = workspace.CurrentCamera
     task.wait(0.5)
     if flyEnabled then startFlying() end
 end)
 
 ---------------------------------------------------------
--- SEED CODES FOR REMAINING TABS
+-- EXTRA TABS
 ---------------------------------------------------------
 for tabIndex = 3, 10 do
     local ExtraTab = CreateTab("Tab " .. tabIndex)
