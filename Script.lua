@@ -1,4 +1,5 @@
--- Jim's Universal Hub V8 (Uncapped Controls, Real IY Fly & Bringing Unanchored Parts)
+
+-- Jim's Universal Hub V10 (Modern UI & Server-Sided Physics Engine)
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -6,403 +7,344 @@ local RunService = game:GetService("RunService")
 local Mouse = LocalPlayer:GetMouse()
 
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local LeftPanel = Instance.new("Frame")
-local RightPanel = Instance.new("Frame")
-local TabContainer = Instance.new("ScrollingFrame")
-local Title = Instance.new("TextLabel")
-
 ScreenGui.Name = "JimsUniversalHub"
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Parent = game.CoreGui or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+-- Theme Palettes (Modern Dark)
+local Theme = {
+    MainBg = Color3.fromRGB(20, 20, 22),
+    SubBg = Color3.fromRGB(28, 28, 32),
+    Accent = Color3.fromRGB(255, 200, 40), -- Clean yellow accent
+    TextMain = Color3.fromRGB(255, 255, 255),
+    TextDark = Color3.fromRGB(160, 160, 165),
+    Button = Color3.fromRGB(36, 36, 40),
+    Active = Color3.fromRGB(0, 180, 100),
+    Alert = Color3.fromRGB(255, 75, 75)
+}
 
-local OpenBtn = Instance.new("TextButton", ScreenGui)
-OpenBtn.Size = UDim2.new(0, 90, 0, 35)
-OpenBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
-OpenBtn.Text = "Open Hub"
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-OpenBtn.Font = Enum.Font.SourceSansBold
-OpenBtn.TextSize = 14
-OpenBtn.Visible = false
-
-local OpenCorner = Instance.new("UICorner", OpenBtn)
-OpenCorner.CornerRadius = UDim.new(0, 6)
-
-local function setHubVisible(visible)
-    MainFrame.Visible = visible
-    if isMobile then
-        OpenBtn.Visible = not visible
-    else
-        OpenBtn.Visible = false
-    end
-end
-
--- Main Window Configuration
+-- Create Main Window Frame
+local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.Position = UDim2.new(0.3, 0, 0.25, 0)
-MainFrame.Size = UDim2.new(0, 550, 0, 350)
+MainFrame.BackgroundColor3 = Theme.MainBg
+MainFrame.Position = UDim2.new(0.25, 0, 0.25, 0)
+MainFrame.Size = UDim2.new(0, 560, 0, 360)
 MainFrame.Active = true
 MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 8)
-
-Title.Name = "Title"
-Title.Parent = MainFrame
+-- Header/Title
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(0, 250, 0, 45)
+Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 15, 0, 10)
-Title.Size = UDim2.new(0, 200, 0, 30)
-Title.Text = "Jim's Universal Hub"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 18
+Title.Text = "JIM'S UNIVERSAL HUB"
+Title.TextColor3 = Theme.Accent
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Font = Enum.Font.SourceSansBold
 
-local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 10)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 75, 75)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 16
-
-local MinBtn = Instance.new("TextButton", MainFrame)
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -70, 0, 10)
-MinBtn.Text = "-"
-MinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-MinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-MinBtn.Font = Enum.Font.SourceSansBold
-MinBtn.TextSize = 16
-
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
-Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
-
-CloseBtn.MouseButton1Click:Connect(function() setHubVisible(false) end)
-OpenBtn.MouseButton1Click:Connect(function() setHubVisible(true) end)
-
-local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    LeftPanel.Visible = not minimized
-    RightPanel.Visible = not minimized
-    MainFrame.Size = minimized and UDim2.new(0, 550, 0, 50) or UDim2.new(0, 550, 0, 350)
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and (input.KeyCode == Enum.KeyCode.KeypadOne or input.KeyCode == Enum.KeyCode.One or input.KeyCode == Enum.KeyCode.RightControl) then
-        setHubVisible(not MainFrame.Visible)
-    end
-end)
-
-LeftPanel.Name = "LeftPanel"
-LeftPanel.Parent = MainFrame
-LeftPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+-- Controls Panels Layout
+local LeftPanel = Instance.new("Frame", MainFrame)
+LeftPanel.Size = UDim2.new(0, 140, 0, 300)
 LeftPanel.Position = UDim2.new(0, 10, 0, 50)
-LeftPanel.Size = UDim2.new(0, 130, 0, 285)
+LeftPanel.BackgroundColor3 = Theme.SubBg
+Instance.new("UICorner", LeftPanel).CornerRadius = UDim.new(0, 6)
 
-TabContainer.Name = "TabContainer"
-TabContainer.Parent = LeftPanel
+local TabContainer = Instance.new("ScrollingFrame", LeftPanel)
+TabContainer.Size = UDim2.new(1, -10, 1, -10)
+TabContainer.Position = UDim2.new(0, 5, 0, 5)
 TabContainer.BackgroundTransparency = 1
-TabContainer.Size = UDim2.new(1, 0, 1, 0)
-TabContainer.CanvasSize = UDim2.new(0, 0, 0, 450)
+TabContainer.CanvasSize = UDim2.new(0, 0, 0, 400)
 TabContainer.ScrollBarThickness = 2
-
 local TabLayout = Instance.new("UIListLayout", TabContainer)
-TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 TabLayout.Padding = UDim.new(0, 5)
 
-RightPanel.Name = "RightPanel"
-RightPanel.Parent = MainFrame
-RightPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-RightPanel.Position = UDim2.new(0, 150, 0, 50)
-RightPanel.Size = UDim2.new(0, 390, 0, 285)
+local RightPanel = Instance.new("Frame", MainFrame)
+RightPanel.Size = UDim2.new(0, 390, 0, 300)
+RightPanel.Position = UDim2.new(0, 160, 0, 50)
+RightPanel.BackgroundColor3 = Theme.SubBg
+Instance.new("UICorner", RightPanel).CornerRadius = UDim.new(0, 6)
 
 local PageContainer = Instance.new("Frame", RightPanel)
-PageContainer.Size = UDim2.new(1, 0, 1, 0)
+PageContainer.Size = UDim2.new(1, -10, 1, -10)
+PageContainer.Position = UDim2.new(0, 5, 0, 5)
 PageContainer.BackgroundTransparency = 1
 
-local tabButtons = {}
-local tabPages = {}
+local tabButtons, tabPages = {}, {}
 
-local function CreateTab(tabName)
-    local TabButton = Instance.new("TextButton", TabContainer)
-    TabButton.Size = UDim2.new(1, -10, 0, 30)
-    TabButton.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    TabButton.Text = tabName
-    TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-    TabButton.TextSize = 14
-    TabButton.Font = Enum.Font.SourceSans
-    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 4)
+local function CreateTab(name)
+    local Btn = Instance.new("TextButton", TabContainer)
+    Btn.Size = UDim2.new(1, 0, 0, 32)
+    Btn.BackgroundColor3 = Theme.Button
+    Btn.Text = name
+    Btn.TextColor3 = Theme.TextDark
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 13
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
 
     local Page = Instance.new("ScrollingFrame", PageContainer)
-    Page.Size = UDim2.new(1, -10, 1, -10)
+    Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.Visible = false
-    Page.CanvasSize = UDim2.new(0, 0, 0, 650)
+    Page.CanvasSize = UDim2.new(0, 0, 0, 600)
     Page.ScrollBarThickness = 4
-    Page.Position = UDim2.new(0, 5, 0, 5)
-    
-    local ContentLayout = Instance.new("UIListLayout", Page)
-    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ContentLayout.Padding = UDim.new(0, 8)
+    local PageLayout = Instance.new("UIListLayout", Page)
+    PageLayout.Padding = UDim.new(0, 8)
 
-    table.insert(tabButtons, TabButton)
+    table.insert(tabButtons, Btn)
     table.insert(tabPages, Page)
 
     if #tabButtons == 1 then
         Page.Visible = true
-        TabButton.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-        TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Btn.BackgroundColor3 = Theme.Accent
+        Btn.TextColor3 = Theme.MainBg
+        Btn.Font = Enum.Font.GothamBold
     end
 
-    TabButton.MouseButton1Click:Connect(function()
+    Btn.MouseButton1Click:Connect(function()
         for i, p in ipairs(tabPages) do
-            p.Visible = (p == Page)
-            tabButtons[i].BackgroundColor3 = (p == Page) and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(35, 35, 40)
-            tabButtons[i].TextColor3 = (p == Page) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+            local active = (p == Page)
+            p.Visible = active
+            tabButtons[i].BackgroundColor3 = active and Theme.Accent or Theme.Button
+            tabButtons[i].TextColor3 = active and Theme.MainBg or Theme.TextDark
+            tabButtons[i].Font = active and Enum.Font.GothamBold or Enum.Font.Gotham
         end
     end)
-
     return Page
 end
 
 local function AddButton(page, text, callback)
-    local Button = Instance.new("TextButton", page)
-    Button.Size = UDim2.new(1, -10, 0, 32)
-    Button.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    Button.Text = text
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14
-    Button.Font = Enum.Font.SourceSans
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
-    Button.MouseButton1Click:Connect(callback)
-    return Button
+    local Btn = Instance.new("TextButton", page)
+    Btn.Size = UDim2.new(1, -5, 0, 35)
+    Btn.BackgroundColor3 = Theme.Button
+    Btn.Text = text
+    Btn.TextColor3 = Theme.TextMain
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 13
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    Btn.MouseButton1Click:Connect(callback)
+    return Btn
 end
 
-local function AddNumberBox(page, text, default, callback)
-    local BoxFrame = Instance.new("Frame", page)
-    BoxFrame.Size = UDim2.new(1, -10, 0, 40)
-    BoxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Instance.new("UICorner", BoxFrame).CornerRadius = UDim.new(0, 4)
+local function AddUncappedInput(page, text, default, callback)
+    local Frame = Instance.new("Frame", page)
+    Frame.Size = UDim2.new(1, -5, 0, 40)
+    Frame.BackgroundColor3 = Theme.Button
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
 
-    local Label = Instance.new("TextLabel", BoxFrame)
-    Label.Size = UDim2.new(0.6, 0, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Text = text .. " (No Limits):"
-    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Label.TextSize = 14
-    Label.Font = Enum.Font.SourceSans
-    Label.BackgroundTransparency = 1
-    Label.TextXAlignment = Enum.TextXAlignment.Left
+    local lbl = Instance.new("TextLabel", Frame)
+    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text .. " (No Limit):"
+    lbl.TextColor3 = Theme.TextDark
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    local InputField = Instance.new("TextBox", BoxFrame)
-    InputField.Size = UDim2.new(0.3, 0, 0.7, 0)
-    InputField.Position = UDim2.new(0.65, 0, 0.15, 0)
-    InputField.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    InputField.Text = tostring(default)
-    InputField.TextColor3 = Color3.fromRGB(60, 120, 255)
-    InputField.TextSize = 14
-    InputField.Font = Enum.Font.SourceSansBold
-    InputField.PlaceholderText = "..."
-    InputField.ClearTextOnFocus = false
-    Instance.new("UICorner", InputField).CornerRadius = UDim.new(0, 4)
+    local Box = Instance.new("TextBox", Frame)
+    Box.Size = UDim2.new(0.3, 0, 0.7, 0)
+    Box.Position = UDim2.new(0.65, 0, 0.15, 0)
+    Box.BackgroundColor3 = Theme.MainBg
+    Box.Text = tostring(default)
+    Box.TextColor3 = Theme.Accent
+    Box.Font = Enum.Font.GothamBold
+    Box.TextSize = 13
+    Box.ClearTextOnFocus = false
+    Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
 
-    local function validateAndSubmit()
-        local num = tonumber(InputField.Text)
-        if num then
-            num = math.floor(num)
-            InputField.Text = tostring(num)
-            callback(num)
-        else
-            InputField.Text = tostring(default)
-        end
-    end
-
-    InputField.FocusLost:Connect(validateAndSubmit)
-end
-
--- Anti-AFK Setup
-task.spawn(function()
-    local virtualUser = game:GetService("VirtualUser")
-    LocalPlayer.Idled:Connect(function()
-        virtualUser:CaptureController()
-        virtualUser:ClickButton2(Vector2.new(0,0))
+    Box.FocusLost:Connect(function()
+        local n = tonumber(Box.Text)
+        if n then callback(n) else Box.Text = tostring(default) end
     end)
+end
+
+-- Mobile UI Toggle System
+local OpenBtn = Instance.new("TextButton", ScreenGui)
+OpenBtn.Size = UDim2.new(0, 90, 0, 35)
+OpenBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
+OpenBtn.Text = "Open Hub"
+OpenBtn.TextColor3 = Theme.TextMain
+OpenBtn.BackgroundColor3 = Theme.Button
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.TextSize = 13
+OpenBtn.Visible = isMobile
+Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 6)
+
+MainFrame.Visible = not isMobile
+
+local function toggleHub()
+    MainFrame.Visible = not MainFrame.Visible
+    if isMobile then OpenBtn.Visible = not MainFrame.Visible end
+end
+
+OpenBtn.MouseButton1Click:Connect(toggleHub)
+
+-- Desktop Keybind Trigger (1 or RightControl)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and (input.KeyCode == Enum.KeyCode.One or input.KeyCode == Enum.KeyCode.RightControl) then
+        toggleHub()
+    end
 end)
 
 ---------------------------------------------------------
--- TAB 1: MAIN TAB (SELL LEMONS & BRING PARTS AUTOMATION)
+-- FEATURES DEVELOPMENT BUILD
 ---------------------------------------------------------
 local MainTab = CreateTab("Main")
+local LocalPlayerTab = CreateTab("LocalPlayer")
 
-AddButton(MainTab, "Run Infinite Yield", function()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
-end)
-
--- NEW BRING UNANCHORED PARTS SUB-GUI GENERATOR BUTTON
-AddButton(MainTab, "Bring Unanchored Parts Tool", function()
+-- 1. SERVER-SIDED BRING & ORBIT PARTS WINDOW BUILD
+AddButton(MainTab, "Bring Unanchored Parts GUI", function()
     if ScreenGui:FindFirstChild("BringPartsGui") then return end
 
     local BGui = Instance.new("Frame", ScreenGui)
     BGui.Name = "BringPartsGui"
-    BGui.Size = UDim2.new(0, 280, 0, 280)
-    BGui.Position = UDim2.new(0.1, 0, 0.45, 0)
-    BGui.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    BGui.Size = UDim2.new(0, 260, 0, 280)
+    BGui.Position = UDim2.new(0.1, 0, 0.3, 0)
+    BGui.BackgroundColor3 = Theme.MainBg
     BGui.Active = true
     BGui.Draggable = true
     Instance.new("UICorner", BGui).CornerRadius = UDim.new(0, 6)
 
-    local BTitle = Instance.new("TextLabel", BGui)
-    BTitle.Size = UDim2.new(1, 0, 0, 30)
-    BTitle.Text = "Bring & Orbit Parts Engine"
-    BTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    BTitle.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    BTitle.Font = Enum.Font.SourceSansBold
-    
-    local BClose = Instance.new("TextButton", BGui)
-    BClose.Size = UDim2.new(0, 30, 0, 30)
-    BClose.Position = UDim2.new(1, -30, 0, 0)
-    BClose.Text = "X"
-    BClose.TextColor3 = Color3.fromRGB(255, 50, 50)
-    BClose.BackgroundTransparency = 1
-    BClose.MouseButton1Click:Connect(function() BGui:Destroy() end)
+    local Header = Instance.new("TextLabel", BGui)
+    Header.Size = UDim2.new(1, -40, 0, 35)
+    Header.Position = UDim2.new(0, 10, 0, 0)
+    Header.BackgroundTransparency = 1
+    Header.Text = "Server-Sided Orbit Engine"
+    Header.TextColor3 = Theme.TextMain
+    Header.Font = Enum.Font.GothamBold
+    Header.TextSize = 13
+    Header.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Configuration Variables
-    local orbitSpeed = 5
-    local orbitRadius = 10
-    local orientationType = "Horizontal" -- Horizontal, Vertical, Square, Circle
-    local bringActive = false
+    local Close = Instance.new("TextButton", BGui)
+    Close.Size = UDim2.new(0, 30, 0, 30)
+    Close.Position = UDim2.new(1, -35, 0, 2)
+    Close.Text = "X"
+    Close.TextColor3 = Theme.Alert
+    Close.BackgroundTransparency = 1
+    Close.MouseButton1Click:Connect(function() BGui:Destroy() end)
 
-    -- Speed Control Input Box
-    local SpeedFrame = Instance.new("Frame", BGui)
-    SpeedFrame.Size = UDim2.new(0.9, 0, 0, 35)
-    SpeedFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
-    SpeedFrame.BackgroundTransparency = 1
+    local orbitSpeed, orbitRadius = 5, 10
+    local layoutPattern = "Horizontal"
+    local active = false
 
-    local SpeedLabel = Instance.new("TextLabel", SpeedFrame)
-    SpeedLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    SpeedLabel.Text = "Orbit Speed:"
-    SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+    -- Embedded Sub UI inputs (Uncapped bounds processing layout)
+    local function subInput(txt, pos, def, cb)
+        local f = Instance.new("Frame", BGui)
+        f.Size = UDim2.new(0.9, 0, 0, 35)
+        f.Position = UDim2.new(0.05, 0, 0, pos)
+        f.BackgroundTransparency = 1
+        
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(0.5, 0, 1, 0)
+        l.Text = txt .. ":"
+        l.TextColor3 = Theme.TextDark
+        l.Font = Enum.Font.Gotham
+        l.TextSize = 12
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.BackgroundTransparency = 1
 
-    local SpeedInput = Instance.new("TextBox", SpeedFrame)
-    SpeedInput.Size = UDim2.new(0.4, 0, 0.8, 0)
-    SpeedInput.Position = UDim2.new(0.55, 0, 0.1, 0)
-    SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    SpeedInput.Text = "5"
-    SpeedInput.TextColor3 = Color3.fromRGB(60, 120, 255)
-    SpeedInput.FocusLost:Connect(function()
-        orbitSpeed = tonumber(SpeedInput.Text) or 5
+        local b = Instance.new("TextBox", f)
+        b.Size = UDim2.new(0.45, 0, 0.8, 0)
+        b.Position = UDim2.new(0.55, 0, 0.1, 0)
+        b.BackgroundColor3 = Theme.SubBg
+        b.Text = tostring(def)
+        b.TextColor3 = Theme.Accent
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 12
+        b.ClearTextOnFocus = false
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+        b.FocusLost:Connect(function()
+            local v = tonumber(b.Text) or def
+            cb(v)
+        end)
+    end
+
+    subInput("Orbit Speed", 45, 5, function(v) orbitSpeed = v end)
+    subInput("Orbit Radius", 85, 10, function(v) orbitRadius = v end)
+
+    local LayoutBtn = Instance.new("TextButton", BGui)
+    LayoutBtn.Size = UDim2.new(0.9, 0, 0, 35)
+    LayoutBtn.Position = UDim2.new(0.05, 0, 0, 130)
+    LayoutBtn.BackgroundColor3 = Theme.Button
+    LayoutBtn.Text = "Orientation: Horizontal"
+    LayoutBtn.TextColor3 = Theme.TextMain
+    LayoutBtn.Font = Enum.Font.Gotham
+    LayoutBtn.TextSize = 12
+    Instance.new("UICorner", LayoutBtn).CornerRadius = UDim.new(0, 4)
+
+    local patterns = {"Horizontal", "Vertical", "Square", "Circle"}
+    local idx = 1
+    LayoutBtn.MouseButton1Click:Connect(function()
+        idx = (idx % #patterns) + 1
+        layoutPattern = patterns[idx]
+        LayoutBtn.Text = "Orientation: " .. layoutPattern
     end)
 
-    -- Radius Control Input Box
-    local RadiusFrame = Instance.new("Frame", BGui)
-    RadiusFrame.Size = UDim2.new(0.9, 0, 0, 35)
-    RadiusFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-    RadiusFrame.BackgroundTransparency = 1
-
-    local RadiusLabel = Instance.new("TextLabel", RadiusFrame)
-    RadiusLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    RadiusLabel.Text = "Orbit Radius:"
-    RadiusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    RadiusLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local RadiusInput = Instance.new("TextBox", RadiusFrame)
-    RadiusInput.Size = UDim2.new(0.4, 0, 0.8, 0)
-    RadiusInput.Position = UDim2.new(0.55, 0, 0.1, 0)
-    RadiusInput.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    RadiusInput.Text = "10"
-    RadiusInput.TextColor3 = Color3.fromRGB(60, 120, 255)
-    RadiusInput.FocusLost:Connect(function()
-        orbitRadius = tonumber(RadiusInput.Text) or 10
-    end)
-
-    -- Orientation Selection Selector Button
-    local OrientBtn = Instance.new("TextButton", BGui)
-    OrientBtn.Size = UDim2.new(0.9, 0, 0, 35)
-    OrientBtn.Position = UDim2.new(0.05, 0, 0.48, 0)
-    OrientBtn.Text = "Orientation: Horizontal"
-    OrientBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    OrientBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", OrientBtn).CornerRadius = UDim.new(0, 4)
-
-    local orientations = {"Horizontal", "Vertical", "Square", "Circle"}
-    local currentIdx = 1
-    OrientBtn.MouseButton1Click:Connect(function()
-        currentIdx = currentIdx + 1
-        if currentIdx > #orientations then currentIdx = 1 end
-        orientationType = orientations[currentIdx]
-        OrientBtn.Text = "Orientation: " .. orientationType
-    end)
-
-    -- Primary Toggle Trigger Activation Switch
     local ToggleBtn = Instance.new("TextButton", BGui)
     ToggleBtn.Size = UDim2.new(0.9, 0, 0, 40)
-    ToggleBtn.Position = UDim2.new(0.05, 0, 0.72, 0)
+    ToggleBtn.Position = UDim2.new(0.05, 0, 0, 185)
+    ToggleBtn.BackgroundColor3 = Theme.Alert
     ToggleBtn.Text = "Bring Parts: OFF"
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
-    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleBtn.Font = Enum.Font.SourceSansBold
+    ToggleBtn.TextColor3 = Theme.TextMain
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = 13
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 4)
 
     ToggleBtn.MouseButton1Click:Connect(function()
-        bringActive = not bringActive
-        ToggleBtn.Text = bringActive and "Bring Parts: ACTIVE" or "Bring Parts: OFF"
-        ToggleBtn.BackgroundColor3 = bringActive and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(255, 75, 75)
+        active = not active
+        ToggleBtn.Text = active and "Bring Parts: ACTIVE" or "Bring Parts: OFF"
+        ToggleBtn.BackgroundColor3 = active and Theme.Active or Theme.Alert
     end)
 
-    -- Core Assembly Physics Iteration Engine
+    -- SERVER-SIDED PHYSICS REPLICATION CORE
     task.spawn(function()
-        local angle = 0
+        local ang = 0
+        pcall(function()
+            settings().Physics.AllowSleep = false
+            LocalPlayer.MaximumSimulationRadius = math.huge
+            if setsimulationradius then setsimulationradius(math.huge) end
+        end)
+
         while BGui and task.wait() do
-            if bringActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local rootPos = LocalPlayer.Character.HumanoidRootPart.Position
-                angle = angle + (0.01 * orbitSpeed)
-                
-                -- Gather all networkable unanchored parts in the simulation world
-                local index = 0
-                local allParts = {}
-                for _, desc in pairs(workspace:GetDescendants()) do
-                    if desc:IsA("BasePart") and not desc.Anchored and not desc:IsDescendantOf(LocalPlayer.Character) then
-                        table.insert(allParts, desc)
+            if active and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local root = LocalPlayer.Character.HumanoidRootPart
+                ang = ang + (0.02 * orbitSpeed)
+
+                local parts = {}
+                for _, d in pairs(workspace:GetDescendants()) do
+                    if d:IsA("BasePart") and not d.Anchored then
+                        local isPlayer = false
+                        for _, p in pairs(Players:GetPlayers()) do
+                            if p.Character and d:IsDescendantOf(p.Character) then isPlayer = true break end
+                        end
+                        if not isPlayer then table.insert(parts, d) end
                     end
                 end
 
-                local partCount = #allParts
-                for i, part in ipairs(allParts) do
+                local count = #parts
+                for i, part in ipairs(parts) do
                     pcall(function()
-                        -- Assert Network Ownership simulation profile parameters
-                        if part:FindFirstChildOfClass("BodyPosition") or part:FindFirstChildOfClass("BodyVelocity") then
-                            -- Skip parts already targeted by complex tracking variables
-                        else
-                            -- Calculate offsets based on chosen pattern geometry rules
-                            local offset = Vector3.new(0,0,0)
-                            local totalAngleOffset = angle + (i * (math.pi * 2 / math.max(partCount, 1)))
+                        local offsetAngle = ang + (i * (math.pi * 2 / math.max(count, 1)))
+                        local offset = Vector3.new(0,0,0)
 
-                            if orientationType == "Horizontal" or orientationType == "Circle" then
-                                offset = Vector3.new(math.cos(totalAngleOffset) * orbitRadius, 0, math.sin(totalAngleOffset) * orbitRadius)
-                            elseif orientationType == "Vertical" then
-                                offset = Vector3.new(0, math.cos(totalAngleOffset) * orbitRadius, math.sin(totalAngleOffset) * orbitRadius)
-                            elseif orientationType == "Square" then
-                                local side = i % 4
-                                if side == 0 then offset = Vector3.new(orbitRadius, 0, (i/partCount)*orbitRadius)
-                                elseif side == 1 then offset = Vector3.new(-orbitRadius, 0, (i/partCount)*orbitRadius)
-                                elseif side == 2 then offset = Vector3.new((i/partCount)*orbitRadius, 0, orbitRadius)
-                                else offset = Vector3.new((i/partCount)*orbitRadius, 0, -orbitRadius) end
-                            end
-
-                            -- Instantly update physical position and strip linear velocity
-                            part.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            part.CFrame = CFrame.new(rootPos + offset)
+                        if layoutPattern == "Horizontal" or layoutPattern == "Circle" then
+                            offset = Vector3.new(math.cos(offsetAngle) * orbitRadius, 0, math.sin(offsetAngle) * orbitRadius)
+                        elseif layoutPattern == "Vertical" then
+                            offset = Vector3.new(0, math.cos(offsetAngle) * orbitRadius, math.sin(offsetAngle) * orbitRadius)
+                        elseif layoutPattern == "Square" then
+                            local edge = i % 4
+                            if edge == 0 then offset = Vector3.new(orbitRadius, 0, (i/count)*orbitRadius)
+                            elseif edge == 1 then offset = Vector3.new(-orbitRadius, 0, (i/count)*orbitRadius)
+                            elseif edge == 2 then offset = Vector3.new((i/count)*orbitRadius, 0, orbitRadius)
+                            else offset = Vector3.new((i/count)*orbitRadius, 0, -orbitRadius) end
                         end
-                     pcall(function() settings().Physics.AllowSleep = false end)
+
+                        local targetPos = root.Position + offset
+                        -- Velocity overrides client-only caching structures to enforce global replication updates
+                        part.AssemblyLinearVelocity = (targetPos - part.Position) * 35
+                        part.CFrame = CFrame.new(targetPos)
                     end)
                 end
             end
@@ -410,344 +352,155 @@ AddButton(MainTab, "Bring Unanchored Parts Tool", function()
     end)
 end)
 
-AddButton(MainTab, "Sell Lemons Automator", function()
+-- 2. AUTOMATIC UTILITY SYSTEMS (SELL LEMONS TYCOON CORE)
+AddButton(MainTab, "Sell Lemons Automator GUI", function()
     if ScreenGui:FindFirstChild("LemonTycoonGui") then return end
 
-    local SubGui = Instance.new("Frame", ScreenGui)
-    SubGui.Name = "LemonTycoonGui"
-    SubGui.Size = UDim2.new(0, 240, 0, 180)
-    SubGui.Position = UDim2.new(0.45, 0, 0.45, 0)
-    SubGui.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    SubGui.Active = true
-    SubGui.Draggable = true
-    Instance.new("UICorner", SubGui).CornerRadius = UDim.new(0, 6)
+    local LGui = Instance.new("Frame", ScreenGui)
+    LGui.Name = "LemonTycoonGui"
+    LGui.Size = UDim2.new(0, 240, 0, 150)
+    LGui.Position = UDim2.new(0.45, 0, 0.45, 0)
+    LGui.BackgroundColor3 = Theme.MainBg
+    LGui.Active = true
+    LGui.Draggable = true
+    Instance.new("UICorner", LGui).CornerRadius = UDim.new(0, 6)
 
-    local SubTitle = Instance.new("TextLabel", SubGui)
-    SubTitle.Size = UDim2.new(1, 0, 0, 30)
-    SubTitle.Text = "Sell Lemons Engine"
-    SubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SubTitle.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    SubTitle.Font = Enum.Font.SourceSansBold
-    
-    local SubClose = Instance.new("TextButton", SubGui)
-    SubClose.Size = UDim2.new(0, 30, 0, 30)
-    SubClose.Position = UDim2.new(1, -30, 0, 0)
-    SubClose.Text = "X"
-    SubClose.TextColor3 = Color3.fromRGB(255, 50, 50)
-    SubClose.BackgroundTransparency = 1
-    SubClose.MouseButton1Click:Connect(function() SubGui:Destroy() end)
+    local LTitle = Instance.new("TextLabel", LGui)
+    LTitle.Size = UDim2.new(1, -35, 0, 35)
+    LTitle.Position = UDim2.new(0, 10, 0, 0)
+    LTitle.Text = "Lemon Automator"
+    LTitle.TextColor3 = Theme.TextMain
+    LTitle.Font = Enum.Font.GothamBold
+    LTitle.TextSize = 13
+    LTitle.TextXAlignment = Enum.TextXAlignment.Left
+    LTitle.BackgroundTransparency = 1
 
-    local AutoSellBtn = Instance.new("TextButton", SubGui)
-    AutoSellBtn.Size = UDim2.new(0.9, 0, 0, 35)
-    AutoSellBtn.Position = UDim2.new(0.05, 0, 0.25, 0)
-    AutoSellBtn.Text = "Auto Sell: OFF"
-    AutoSellBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    AutoSellBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", AutoSellBtn).CornerRadius = UDim.new(0, 4)
+    local LClose = Instance.new("TextButton", LGui)
+    LClose.Size = UDim2.new(0, 30, 0, 30)
+    LClose.Position = UDim2.new(1, -35, 0, 2)
+    LClose.Text = "X"
+    LClose.TextColor3 = Theme.Alert
+    LClose.BackgroundTransparency = 1
+    LClose.MouseButton1Click:Connect(function() LGui:Destroy() end)
 
-    local AutoUpgradeBtn = Instance.new("TextButton", SubGui)
-    AutoUpgradeBtn.Size = UDim2.new(0.9, 0, 0, 35)
-    AutoUpgradeBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
-    AutoUpgradeBtn.Text = "Auto Upgrade: OFF"
-    AutoUpgradeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    AutoUpgradeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", AutoUpgradeBtn).CornerRadius = UDim.new(0, 4)
+    local SellBtn = Instance.new("TextButton", LGui)
+    SellBtn.Size = UDim2.new(0.9, 0, 0, 35)
+    SellBtn.Position = UDim2.new(0.05, 0, 0, 45)
+    SellBtn.BackgroundColor3 = Theme.Button
+    SellBtn.Text = "Auto Sell: OFF"
+    SellBtn.TextColor3 = Theme.TextMain
+    SellBtn.Font = Enum.Font.Gotham
+    Instance.new("UICorner", SellBtn).CornerRadius = UDim.new(0, 4)
 
-    local function getMyTycoon()
-        local searchFolders = {workspace:FindFirstChild("Tycoons"), workspace:FindFirstChild("Plots"), workspace:FindFirstChild("TycoonFolder"), workspace}
-        for _, folder in pairs(searchFolders) do
-            if folder then
-                for _, plot in pairs(folder:GetChildren()) do
-                    local owner = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("OwnerName")
-                    if owner and (owner.Value == LocalPlayer or owner.Value == LocalPlayer.Name or tostring(owner.Value) == LocalPlayer.Name) then
-                        return plot
-                    end
-                    if string.find(string.lower(plot.Name), string.lower(LocalPlayer.Name)) or plot.Name == LocalPlayer.Name then
-                        return plot
-                    end
-                end
-            end
-        end
-        return nil
-    end
+    local running = false
+    SellBtn.MouseButton1Click:Connect(function()
+        running = not running
+        SellBtn.Text = running and "Auto Sell: ON" or "Auto Sell: OFF"
+        SellBtn.BackgroundColor3 = running and Theme.Active or Theme.Button
 
-    local function interactWithButton(part)
-        if not part or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-        if firetouchinterest then
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, part, 0)
-            task.wait(0.01)
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, part, 1)
-        else
-            local root = LocalPlayer.Character.HumanoidRootPart
-            local oldPos = root.CFrame
-            root.CFrame = part.CFrame
-            task.wait(0.04)
-            root.CFrame = oldPos
-        end
-    end
-
-    local selling = false
-    AutoSellBtn.MouseButton1Click:Connect(function()
-        selling = not selling
-        AutoSellBtn.Text = selling and "Auto Sell: ON" or "Auto Sell: OFF"
-        AutoSellBtn.BackgroundColor3 = selling and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(45, 45, 50)
-        
         task.spawn(function()
             local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage"):FindFirstChild("Events")
-            local sellRemote = remotes and (remotes:FindFirstChild("Sell") or remotes:FindFirstChild("SellLemons") or remotes:FindFirstChild("ClaimCash"))
-            
-            while selling do
-                if sellRemote and sellRemote:IsA("RemoteEvent") then
-                    sellRemote:FireServer()
-                else
-                    local myTycoon = getMyTycoon()
-                    local pad = myTycoon and (myTycoon:FindFirstChild("Sell") or myTycoon:FindFirstChild("SellPad") or myTycoon:FindFirstChild("Collector"))
-                    if not pad then
-                        pad = workspace:FindFirstChild("Sell") or workspace:FindFirstChild("SellPad") or workspace:FindFirstChild("LemonSell")
-                    end
-                    if pad then
-                        interactWithButton(pad:FindFirstChild("Touch") or pad:FindFirstChild("Head") or pad)
-                    end
+            local remote = remotes and (remotes:FindFirstChild("Sell") or remotes:FindFirstChild("SellLemons"))
+            while running do
+                if remote and remote:IsA("RemoteEvent") then
+                    remote:FireServer()
                 end
-                task.wait(0.3)
-            end
-        end)
-    end)
-
-    local upgrading = false
-    AutoUpgradeBtn.MouseButton1Click:Connect(function()
-        upgrading = not upgrading
-        AutoUpgradeBtn.Text = upgrading and "Auto Upgrade: ON" or "Auto Upgrade: OFF"
-        AutoUpgradeBtn.BackgroundColor3 = upgrading and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(45, 45, 50)
-        
-        task.spawn(function()
-            while upgrading do
-                local myTycoon = getMyTycoon()
-                if myTycoon then
-                    local buttons = myTycoon:FindFirstChild("Buttons") or myTycoon:FindFirstChild("Upgrades") or myTycoon
-                    for _, btn in pairs(buttons:GetDescendants()) do
-                        if btn:IsA("TouchTransmitter") or btn.Name == "TouchInterest" then
-                            local realPart = btn.Parent
-                            if realPart and realPart:IsA("BasePart") then
-                                local parentModel = realPart.Parent
-                                local isLocked = parentModel:FindFirstChild("DevProduct") or parentModel:FindFirstChild("Gamepass")
-                                if not isLocked then
-                                    interactWithButton(realPart)
-                                    task.wait(0.05)
-                                end
-                            end
-                        end
-                    end
-                end
-                task.wait(0.7)
+                task.wait(0.5)
             end
         end)
     end)
 end)
 
----------------------------------------------------------
--- TAB 2: LOCALPLAYER TAB (REAL UNALTERED IY FLY MECHANICS)
----------------------------------------------------------
-local LocalPlayerTab = CreateTab("LocalPlayer")
+-- 3. LOCAL PLAYER CONTROLS (UNRESTRICTED SPEED & EXTRACTED IY FLY ALGORITHMS)
+local targetSpeed, targetJump = 16, 50
+local flySpeed, flyRunning = 50, false
 
-local targetWalkSpeed = 16
-local targetJumpPower = 50
-local targetFlySpeed = 50
-local flyEnabled = false
-local wallhopEnabled = false
-local camera = workspace.CurrentCamera
+AddUncappedInput(LocalPlayerTab, "WalkSpeed", 16, function(v) targetSpeed = v end)
+AddUncappedInput(LocalPlayerTab, "JumpPower", 50, function(v) targetJump = v end)
+AddUncappedInput(LocalPlayerTab, "Fly Speed", 50, function(v) flySpeed = v end)
 
 RunService.RenderStepped:Connect(function()
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            if humanoid.WalkSpeed ~= targetWalkSpeed then humanoid.WalkSpeed = targetWalkSpeed end
-            if humanoid.UseJumpPower then
-                if humanoid.JumpPower ~= targetJumpPower then humanoid.JumpPower = targetJumpPower end
-            else
-                if humanoid.JumpHeight ~= (targetJumpPower * 0.14) then humanoid.JumpHeight = (targetJumpPower * 0.14) end
-            end
-        end
-    end
-end)
-
-AddNumberBox(LocalPlayerTab, "WalkSpeed", 16, function(value)
-    targetWalkSpeed = value
-end)
-
-AddNumberBox(LocalPlayerTab, "JumpPower", 50, function(value)
-    targetJumpPower = value
-end)
-
-local IYFlyBodyVelocity
-local IYFlyBodyGyro
-local IYFlyConnection
-local flyKeyDown, flyKeyUp
-
-local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-local SPEED = 0
-
-local function stopFlying()
-    flyEnabled = false
-    if IYFlyConnection then IYFlyConnection:Disconnect() IYFlyConnection = nil end
-    if flyKeyDown then flyKeyDown:Disconnect() flyKeyDown = nil end
-    if flyKeyUp then flyKeyUp:Disconnect() flyKeyUp = nil end
-    if IYFlyBodyVelocity then IYFlyBodyVelocity:Destroy() IYFlyBodyVelocity = nil end
-    if IYFlyBodyGyro then IYFlyBodyGyro:Destroy() IYFlyBodyGyro = nil end
-    
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Humanoid") then
-        character:FindFirstChildOfClass("Humanoid").PlatformStand = false
-    end
-end
-
-local function startFlying()
-    stopFlying()
-    flyEnabled = true
-    
-    local character = LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    
-    if not root or not humanoid then return end
-    humanoid.PlatformStand = true
-
-    CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-    lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-    SPEED = 0
-
-    IYFlyBodyGyro = Instance.new("BodyGyro", root)
-    IYFlyBodyGyro.P = 9e4
-    IYFlyBodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-    IYFlyBodyGyro.cframe = root.CFrame
-
-    IYFlyBodyVelocity = Instance.new("BodyVelocity", root)
-    IYFlyBodyVelocity.velocity = Vector3.new(0, 0.1, 0)
-    IYFlyBodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
-
-    flyKeyDown = Mouse.KeyDown:Connect(function(KEY)
-        if KEY:lower() == 'w' then CONTROL.F = targetFlySpeed
-        elseif KEY:lower() == 's' then CONTROL.B = -targetFlySpeed
-        elseif KEY:lower() == 'a' then CONTROL.L = -targetFlySpeed
-        elseif KEY:lower() == 'd' then CONTROL.R = targetFlySpeed
-        elseif KEY:lower() == 'e' then CONTROL.Q = targetFlySpeed * 2
-        elseif KEY:lower() == 'q' then CONTROL.E = -targetFlySpeed * 2
-        end
-    end)
-    
-    flyKeyUp = Mouse.KeyUp:Connect(function(KEY)
-        if KEY:lower() == 'w' then CONTROL.F = 0
-        elseif KEY:lower() == 's' then CONTROL.B = 0
-        elseif KEY:lower() == 'a' then CONTROL.L = 0
-        elseif KEY:lower() == 'd' then CONTROL.R = 0
-        elseif KEY:lower() == 'e' then CONTROL.Q = 0
-        elseif KEY:lower() == 'q' then CONTROL.E = 0
-        end
-    end)
-
-    IYFlyConnection = RunService.RenderStepped:Connect(function()
-        if not flyEnabled or not root or not IYFlyBodyVelocity or not IYFlyBodyGyro then
-            stopFlying()
-            return
-        end
-        
-        if humanoid then humanoid.PlatformStand = true end
-        
-        if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
-            SPEED = 50
-        elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
-            SPEED = 0
-        end
-        
-        local mobileMove = humanoid and humanoid.MoveDirection or Vector3.new(0,0,0)
-        
-        if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 or mobileMove.Magnitude > 0 then
-            local workingCamera = workspace.CurrentCamera
-            local baseVector = Vector3.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + (CONTROL.Q + CONTROL.E)) * 0.2, (CONTROL.F + CONTROL.B) * 0.4)
-            
-            if mobileMove.Magnitude > 0 then
-                local verticalDirection = 0
-                if UserInputService.JumpAxis and UserInputService.JumpAxis.Y > 0 then verticalDirection = targetFlySpeed end
-                IYFlyBodyVelocity.velocity = (mobileMove * targetFlySpeed) + Vector3.new(0, verticalDirection, 0)
-            else
-                IYFlyBodyVelocity.velocity = workingCamera.CFrame:VectorToWorldSpace(baseVector)
-            end
-            
-            lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R, Q = CONTROL.Q, E = CONTROL.E}
-        elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
-            local workingCamera = workspace.CurrentCamera
-            IYFlyBodyVelocity.velocity = workingCamera.CFrame:VectorToWorldSpace(Vector3.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + (lCONTROL.Q + lCONTROL.E)) * 0.2, (lCONTROL.F + lCONTROL.B) * 0.4))
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+        if hum.UseJumpPower then
+            if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
         else
-            IYFlyBodyVelocity.velocity = Vector3.new(0, 0, 0)
+            if hum.JumpHeight ~= (targetJump * 0.14) then hum.JumpHeight = (targetJump * 0.14) end
         end
-        
-        IYFlyBodyGyro.cframe = workspace.CurrentCamera.CFrame
-    end)
-end
-
-local FlyToggleBtn = AddButton(LocalPlayerTab, "Fly: OFF", function() end)
-FlyToggleBtn.MouseButton1Click:Connect(function()
-    if flyEnabled then
-        stopFlying()
-        FlyToggleBtn.Text = "Fly: OFF"
-        FlyToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    else
-        startFlying()
-        FlyToggleBtn.Text = "Fly: ON"
-        FlyToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
     end
 end)
 
-AddNumberBox(LocalPlayerTab, "Fly Speed", 50, function(value)
-    targetFlySpeed = value
-end)
+local FlyToggle = AddButton(LocalPlayerTab, "Toggle Flight Engine: OFF", function() end)
 
-local WhToggleBtn = AddButton(LocalPlayerTab, "Wallhop Engine: OFF", function() end)
-WhToggleBtn.MouseButton1Click:Connect(function()
-    wallhopEnabled = not wallhopEnabled
-    WhToggleBtn.Text = wallhopEnabled and "Wallhop Engine: ON" or "Wallhop Engine: OFF"
-    WhToggleBtn.BackgroundColor3 = wallhopEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(45, 45, 50)
-end)
+local bVel, bGyro, renderLoop, kDown, kUp
+local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 
-UserInputService.JumpRequest:Connect(function()
-    if not wallhopEnabled or flyEnabled then return end
+local function stopFlight()
+    flyRunning = false
+    FlyToggle.Text = "Toggle Flight Engine: OFF"
+    FlyToggle.BackgroundColor3 = Theme.Button
+    if renderLoop then renderLoop:Disconnect() renderLoop = nil end
+    if kDown then kDown:Disconnect() kDown = nil end
+    if kUp then kUp:Disconnect() kUp = nil end
+    if bVel then bVel:Destroy() bVel = nil end
+    if bGyro then bGyro:Destroy() bGyro = nil end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = false end
+end
+
+FlyToggle.MouseButton1Click:Connect(function()
+    if flyRunning then stopFlight() return end
     
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChildOfClass("Humanoid") then
-        local root = character.HumanoidRootPart
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-        raycastParams.FilterDescendantsInstances = {character}
-        
-        local direction = root.CFrame.LookVector * 2.5
-        local result = workspace:Raycast(root.Position, direction, raycastParams)
-        
-        if result and result.Instance and result.Instance.CanCollide then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            
-            local currentCFrame = camera.CFrame
-            local x, y, z = currentCFrame:ToEulerAnglesYXZ()
-            camera.CFrame = CFrame.new(currentCFrame.Position) * CFrame.Angles(0, y + 0.785, 0) * CFrame.Angles(x, 0, z)
+    flyRunning = true
+    FlyToggle.Text = "Toggle Flight Engine: ACTIVE"
+    FlyToggle.BackgroundColor3 = Theme.Active
+
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then return end
+
+    bGyro = Instance.new("BodyGyro", root)
+    bGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bGyro.cframe = root.CFrame
+
+    bVel = Instance.new("BodyVelocity", root)
+    bVel.maxForce = Vector3.new(9e9, 9e9, 9e9)
+    bVel.velocity = Vector3.new(0, 0.1, 0)
+
+    kDown = Mouse.KeyDown:Connect(function(k)
+        if k:lower() == 'w' then CONTROL.F = flySpeed
+        elseif k:lower() == 's' then CONTROL.B = -flySpeed
+        elseif k:lower() == 'a' then CONTROL.L = -flySpeed
+        elseif k:lower() == 'd' then CONTROL.R = flySpeed
         end
-    end
+    end)
+
+    kUp = Mouse.KeyUp:Connect(function(k)
+        if k:lower() == 'w' then CONTROL.F = 0
+        elseif k:lower() == 's' then CONTROL.B = 0
+        elseif k:lower() == 'a' then CONTROL.L = 0
+        elseif k:lower() == 'd' then CONTROL.R = 0
+        end
+    end)
+
+    renderLoop = RunService.RenderStepped:Connect(function()
+        if not flyRunning or not root or not bVel then stopFlight() return end
+        hum.PlatformStand = true
+        
+        local cam = workspace.CurrentCamera
+        local direction = Vector3.new(CONTROL.L + CONTROL.R, 0, CONTROL.F + CONTROL.B)
+        
+        if hum.MoveDirection.Magnitude > 0 then
+            bVel.velocity = hum.MoveDirection * flySpeed
+        else
+            bVel.velocity = cam.CFrame:VectorToWorldSpace(direction)
+        end
+        bGyro.cframe = cam.CFrame
+    end)
 end)
 
-LocalPlayer.CharacterAdded:Connect(function()
-    camera = workspace.CurrentCamera
-    task.wait(0.5)
-    if flyEnabled then startFlying() end
-end)
-
----------------------------------------------------------
--- PLACEHOLDER SECTIONS
----------------------------------------------------------
-for tabIndex = 3, 10 do
-    local ExtraTab = CreateTab("Tab " .. tabIndex)
-    for btnIndex = 1, 20 do
-        AddButton(ExtraTab, "Coming Soon", function() end)
-    end
-end
+-- Multi-Tab Placeholders Expansion Setup 
+for i = 3, 6 do CreateTab("Extra " .. i) end
