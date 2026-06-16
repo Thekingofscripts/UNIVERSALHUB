@@ -1,108 +1,344 @@
+-- Load the Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Jim's Universal Hub V10 (Modern UI & Server-Sided Physics Engine)
-local UserInputService = game:GetService("UserInputService")
+-- Initialize Windows
+local Window = Rayfield:CreateWindow({
+   Name = "JIM'S UNIVERSAL HUB - V12",
+   LoadingTitle = "Lemon Engine Suite",
+   LoadingSubtitle = "Rayfield Port Build",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "JimsHubConfig",
+      FileName = "UniversalSettings"
+   },
+   Discord = { Enabled = false },
+   KeySystem = false
+})
+
+-- Global State Setup
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Mouse = LocalPlayer:GetMouse()
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JimsUniversalHub"
-ScreenGui.Parent = game.CoreGui or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false
+local targetSpeed, targetJump = 16, 50
+local flySpeed, flyRunning = 50, false
+local autoSellRunning = false
 
--- Theme Palettes (Modern Dark)
-local Theme = {
-    MainBg = Color3.fromRGB(20, 20, 22),
-    SubBg = Color3.fromRGB(28, 28, 32),
-    Accent = Color3.fromRGB(255, 200, 40), -- Clean yellow accent
-    TextMain = Color3.fromRGB(255, 255, 255),
-    TextDark = Color3.fromRGB(160, 160, 165),
-    Button = Color3.fromRGB(36, 36, 40),
-    Active = Color3.fromRGB(0, 180, 100),
-    Alert = Color3.fromRGB(255, 75, 75)
-}
+local orbitActive = false
+local orbitSpeed, orbitRadius = 5, 10
+local layoutPattern = "Horizontal"
 
--- Create Main Window Frame
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Name = "MainFrame"
-MainFrame.BackgroundColor3 = Theme.MainBg
-MainFrame.Position = UDim2.new(0.25, 0, 0.25, 0)
-MainFrame.Size = UDim2.new(0, 560, 0, 360)
-MainFrame.Active = true
-MainFrame.Draggable = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+-- Wallhop Engine Configurations
+local wallhopActive = false
+local wallhopPower = 50
 
--- Header/Title
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(0, 250, 0, 45)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "JIM'S UNIVERSAL HUB"
-Title.TextColor3 = Theme.Accent
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
+---------------------------------------------------------
+-- CHARACTER TAB
+---------------------------------------------------------
+local PlayerTab = Window:CreateTab("LocalPlayer", 4483362458)
+PlayerTab:CreateSection("Movement Controls")
 
--- Controls Panels Layout
-local LeftPanel = Instance.new("Frame", MainFrame)
-LeftPanel.Size = UDim2.new(0, 140, 0, 300)
-LeftPanel.Position = UDim2.new(0, 10, 0, 50)
-LeftPanel.BackgroundColor3 = Theme.SubBg
-Instance.new("UICorner", LeftPanel).CornerRadius = UDim.new(0, 6)
+-- Uncapped Inputs via Textboxes to avoid standard slider limits
+PlayerTab:CreateInput({
+   Name = "WalkSpeed Override",
+   PlaceholderText = "Default: 16",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then targetSpeed = num else targetSpeed = 16 end
+   end,
+})
 
-local TabContainer = Instance.new("ScrollingFrame", LeftPanel)
-TabContainer.Size = UDim2.new(1, -10, 1, -10)
-TabContainer.Position = UDim2.new(0, 5, 0, 5)
-TabContainer.BackgroundTransparency = 1
-TabContainer.CanvasSize = UDim2.new(0, 0, 0, 400)
-TabContainer.ScrollBarThickness = 2
-local TabLayout = Instance.new("UIListLayout", TabContainer)
-TabLayout.Padding = UDim.new(0, 5)
+PlayerTab:CreateInput({
+   Name = "JumpPower Override",
+   PlaceholderText = "Default: 50",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then targetJump = num else targetJump = 50 end
+   end,
+})
 
-local RightPanel = Instance.new("Frame", MainFrame)
-RightPanel.Size = UDim2.new(0, 390, 0, 300)
-RightPanel.Position = UDim2.new(0, 160, 0, 50)
-RightPanel.BackgroundColor3 = Theme.SubBg
-Instance.new("UICorner", RightPanel).CornerRadius = UDim.new(0, 6)
-
-local PageContainer = Instance.new("Frame", RightPanel)
-PageContainer.Size = UDim2.new(1, -10, 1, -10)
-PageContainer.Position = UDim2.new(0, 5, 0, 5)
-PageContainer.BackgroundTransparency = 1
-
-local tabButtons, tabPages = {}, {}
-
-local function CreateTab(name)
-    local Btn = Instance.new("TextButton", TabContainer)
-    Btn.Size = UDim2.new(1, 0, 0, 32)
-    Btn.BackgroundColor3 = Theme.Button
-    Btn.Text = name
-    Btn.TextColor3 = Theme.TextDark
-    Btn.Font = Enum.Font.Gotham
-    Btn.TextSize = 13
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
-
-    local Page = Instance.new("ScrollingFrame", PageContainer)
-    Page.Size = UDim2.new(1, 0, 1, 0)
-    Page.BackgroundTransparency = 1
-    Page.Visible = false
-    Page.CanvasSize = UDim2.new(0, 0, 0, 600)
-    Page.ScrollBarThickness = 4
-    local PageLayout = Instance.new("UIListLayout", Page)
-    PageLayout.Padding = UDim.new(0, 8)
-
-    table.insert(tabButtons, Btn)
-    table.insert(tabPages, Page)
-
-    if #tabButtons == 1 then
-        Page.Visible = true
-        Btn.BackgroundColor3 = Theme.Accent
-        Btn.TextColor3 = Theme.MainBg
-        Btn.Font = Enum.Font.GothamBold
+-- Continuous loop ensuring the values stay enforced
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+        if hum.UseJumpPower then
+            if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+        else
+            if hum.JumpHeight ~= (targetJump * 0.14) then hum.JumpHeight = (targetJump * 0.14) end
+        end
     end
+end)
 
-    Btn.MouseButton1Click:Connect(function()
+PlayerTab:CreateSection("Wallhop Engine")
+
+PlayerTab:CreateToggle({
+   Name = "Enable Wallhop Mechanics",
+   CurrentValue = false,
+   Flag = "WallhopToggleFlag",
+   Callback = function(Value)
+      wallhopActive = Value
+   end
+})
+
+PlayerTab:CreateInput({
+   Name = "Wallhop Jump Impulse Power",
+   PlaceholderText = "Default: 50",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then wallhopPower = num else wallhopPower = 50 end
+   end,
+})
+
+-- WALLHOP DETECTOR AND IMPULSE LOOP
+UserInputService.JumpRequest:Connect(function()
+    if not wallhopActive then return end
+    
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then return end
+
+    -- Raycast parameters to filter out the local player's own character geometry
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {char}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+    -- Check directions relative to the character's facing orientation (Front, Back, Left, Right)
+    local checkDirections = {
+        root.CFrame.LookVector * 2.5,
+        -root.CFrame.LookVector * 2.5,
+        root.CFrame.RightVector * 2.5,
+        -root.CFrame.RightVector * 2.5
+    }
+
+    for _, direction in ipairs(checkDirections) do
+        local raycastResult = workspace:Raycast(root.Position, direction, raycastParams)
+        
+        -- If a solid surface wall is found within range, execute a physics momentum override
+        if raycastResult and raycastResult.Instance and not raycastResult.Instance.CanCollide == false then
+            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, wallhopPower, root.AssemblyLinearVelocity.Z)
+            break
+        end
+    end
+end)
+
+PlayerTab:CreateSection("Flight Engine (IY Mode)")
+
+PlayerTab:CreateInput({
+   Name = "Flight Velocity Speed",
+   PlaceholderText = "Default: 50",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then flySpeed = num else flySpeed = 50 end
+   end,
+})
+
+local bVel, bGyro, renderLoop, kDown, kUp
+local CONTROL = {F = 0, B = 0, L = 0, R = 0}
+
+local function stopFlight()
+    flyRunning = false
+    if renderLoop then renderLoop:Disconnect() renderLoop = nil end
+    if kDown then kDown:Disconnect() kDown = nil end
+    if kUp then kUp:Disconnect() kUp = nil end
+    if bVel then bVel:Destroy() bVel = nil end
+    if bGyro then bGyro:Destroy() bGyro = nil end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = false end
+end
+
+PlayerTab:CreateToggle({
+   Name = "Toggle Fly Mechanics",
+   CurrentValue = false,
+   Flag = "FlyToggleFlag",
+   Callback = function(Value)
+      if not Value then stopFlight() return end
+      
+      flyRunning = true
+      local char = LocalPlayer.Character
+      local root = char and char:FindFirstChild("HumanoidRootPart")
+      local hum = char and char:FindFirstChildOfClass("Humanoid")
+      if not root or not hum then return end
+
+      bGyro = Instance.new("BodyGyro", root)
+      bGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+      bGyro.cframe = root.CFrame
+
+      bVel = Instance.new("BodyVelocity", root)
+      bVel.maxForce = Vector3.new(9e9, 9e9, 9e9)
+      bVel.velocity = Vector3.new(0, 0.1, 0)
+
+      kDown = Mouse.KeyDown:Connect(function(k)
+          if k:lower() == 'w' then CONTROL.F = flySpeed
+          elseif k:lower() == 's' then CONTROL.B = -flySpeed
+          elseif k:lower() == 'a' then CONTROL.L = -flySpeed
+          elseif k:lower() == 'd' then CONTROL.R = flySpeed
+          end
+      end)
+
+      kUp = Mouse.KeyUp:Connect(function(k)
+          if k:lower() == 'w' then CONTROL.F = 0
+          elseif k:lower() == 's' then CONTROL.B = 0
+          elseif k:lower() == 'a' then CONTROL.L = 0
+          elseif k:lower() == 'd' then CONTROL.R = 0
+          end
+      end)
+
+      renderLoop = RunService.RenderStepped:Connect(function()
+          if not flyRunning or not root or not bVel then stopFlight() return end
+          hum.PlatformStand = true
+          
+          local cam = workspace.CurrentCamera
+          local direction = Vector3.new(CONTROL.L + CONTROL.R, 0, CONTROL.F + CONTROL.B)
+          
+          if hum.MoveDirection.Magnitude > 0 then
+              bVel.velocity = hum.MoveDirection * flySpeed
+          else
+              bVel.velocity = cam.CFrame:VectorToWorldSpace(direction)
+          end
+          bGyro.cframe = cam.CFrame
+      end)
+   end
+})
+
+---------------------------------------------------------
+-- WORLD & AUTOMATION TAB
+---------------------------------------------------------
+local MainTab = Window:CreateTab("Automation & Physics", 4483362458)
+MainTab:CreateSection("Lemon Tycoon Automator")
+
+MainTab:CreateToggle({
+   Name = "Auto-Sell Lemons Loop",
+   CurrentValue = false,
+   Flag = "AutoSellFlag",
+   Callback = function(Value)
+      autoSellRunning = Value
+      if autoSellRunning then
+         task.spawn(function()
+            local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") or game:GetService("ReplicatedStorage"):FindFirstChild("Events")
+            local remote = remotes and (remotes:FindFirstChild("Sell") or remotes:FindFirstChild("SellLemons"))
+            while autoSellRunning do
+                if remote and remote:IsA("RemoteEvent") then
+                    remote:FireServer()
+                end
+                task.wait(0.5)
+            end
+         end)
+      end
+   end
+})
+
+MainTab:CreateSection("Server-Sided Bring/Orbit Config")
+
+MainTab:CreateInput({
+   Name = "Orbit Engine Speed",
+   PlaceholderText = "Default: 5",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then orbitSpeed = num else orbitSpeed = 5 end
+   end,
+})
+
+MainTab:CreateInput({
+   Name = "Orbit Radius Distance",
+   PlaceholderText = "Default: 10",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local num = tonumber(Text)
+      if num then orbitRadius = num else orbitRadius = 10 end
+   end,
+})
+
+MainTab:CreateDropdown({
+   Name = "Layout Orientation Matrix",
+   Options = {"Horizontal", "Vertical", "Square", "Circle"},
+   CurrentOption = {"Horizontal"},
+   MultipleOptions = false,
+   Flag = "LayoutDropFlag",
+   Callback = function(Option)
+      layoutPattern = Option[1]
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Activate Server-Sided Bring",
+   CurrentValue = false,
+   Flag = "BringPartsFlag",
+   Callback = function(Value)
+      orbitActive = Value
+   end
+})
+
+-- SERVER-SIDED PHYSICS ENGINE PIPELINE
+task.spawn(function()
+    local ang = 0
+    pcall(function()
+        settings().Physics.AllowSleep = false
+        LocalPlayer.MaximumSimulationRadius = math.huge
+        if setsimulationradius then setsimulationradius(math.huge) end
+    end)
+
+    while true do
+        task.wait()
+        if orbitActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local root = LocalPlayer.Character.HumanoidRootPart
+            ang = ang + (0.02 * orbitSpeed)
+
+            local parts = {}
+            for _, d in pairs(workspace:GetDescendants()) do
+                if d:IsA("BasePart") and not d.Anchored then
+                    local isPlayer = false
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p.Character and d:IsDescendantOf(p.Character) then isPlayer = true break end
+                    end
+                    if not isPlayer then table.insert(parts, d) end
+                end
+            end
+
+            local count = #parts
+            for i, part in ipairs(parts) do
+                pcall(function()
+                    local offsetAngle = ang + (i * (math.pi * 2 / math.max(count, 1)))
+                    local offset = Vector3.new(0,0,0)
+
+                    if layoutPattern == "Horizontal" or layoutPattern == "Circle" then
+                        offset = Vector3.new(math.cos(offsetAngle) * orbitRadius, 0, math.sin(offsetAngle) * orbitRadius)
+                    elseif layoutPattern == "Vertical" then
+                        offset = Vector3.new(0, math.cos(offsetAngle) * orbitRadius, math.sin(offsetAngle) * orbitRadius)
+                    elseif layoutPattern == "Square" then
+                        local edge = i % 4
+                        if edge == 0 then offset = Vector3.new(orbitRadius, 0, (i/count)*orbitRadius)
+                        elseif edge == 1 then offset = Vector3.new(-orbitRadius, 0, (i/count)*orbitRadius)
+                        elseif edge == 2 then offset = Vector3.new((i/count)*orbitRadius, 0, orbitRadius)
+                        else offset = Vector3.new((i/count)*orbitRadius, 0, -orbitRadius) end
+                    end
+
+                    local targetPos = root.Position + offset
+                    -- Enforces replication via velocity vector manipulation 
+                    part.AssemblyLinearVelocity = (targetPos - part.Position) * 35
+                    part.CFrame = CFrame.new(targetPos)
+                end)
+            end
+        end
+    end
+end)
+
+-- Load Completion Banner
+Rayfield:Notify({
+   Title = "Hub Engine Synchronized",
+   Content = "Wallhop engine algorithms initialized fully.",
+   Duration = 4,
+   Image = 4483362458,
+})
         for i, p in ipairs(tabPages) do
             local active = (p == Page)
             p.Visible = active
